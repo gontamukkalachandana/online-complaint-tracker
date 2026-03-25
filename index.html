@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Complaint System Pro</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* BACKGROUND */
+body {
+    height: 100vh;
+    display: flex;
+    background: linear-gradient(120deg, #ff7e5f, #6a11cb, #00c6ff);
+    color: white;
+}
+
+/* SIDEBAR */
+.sidebar {
+    width: 220px;
+    background: rgba(0,0,0,0.4);
+    padding: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.sidebar h2 {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.sidebar button {
+    width: 100%;
+    margin: 10px 0;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.sidebar button:hover {
+    background: #00c6ff;
+    color: black;
+}
+
+/* MAIN */
+.main {
+    flex: 1;
+    padding: 30px;
+}
+
+/* CARDS */
+.card {
+    max-width: 700px;
+    margin: auto;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(15px);
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    animation: fade 0.5s ease;
+}
+
+@keyframes fade {
+    from {opacity: 0; transform: translateY(10px);}
+    to {opacity: 1; transform: translateY(0);}
+}
+
+/* INPUTS */
+input, textarea, select {
+    width: 100%;
+    padding: 12px;
+    margin: 12px 0;
+    border-radius: 10px;
+    border: none;
+}
+
+/* BUTTON */
+.action-btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* STATUS BADGES */
+.status {
+    padding: 5px 10px;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+.pending { background: orange; }
+.progress { background: #00c6ff; }
+.resolved { background: lightgreen; color: black; }
+
+/* SECTIONS */
+.section { display: none; }
+.active { display: block; }
+
+/* RESULT */
+.result {
+    margin-top: 15px;
+    padding: 15px;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.3);
+}
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+    <h2>📢 System</h2>
+    <button onclick="show('submit')">Submit</button>
+    <button onclick="show('track')">Track</button>
+    <button onclick="show('admin')">Admin</button>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+<!-- SUBMIT -->
+<div id="submit" class="section active">
+<div class="card">
+<h2>Submit Complaint</h2>
+
+<input id="name" placeholder="Your Name">
+<select id="category">
+<option>Electricity</option>
+<option>Water</option>
+<option>Internet</option>
+<option>Other</option>
+</select>
+<textarea id="desc" placeholder="Describe issue"></textarea>
+
+<button class="action-btn" onclick="submit()">Submit</button>
+
+<div id="submitRes" class="result"></div>
+</div>
+</div>
+
+<!-- TRACK -->
+<div id="track" class="section">
+<div class="card">
+<h2>Track Complaint</h2>
+
+<input id="trackId" placeholder="Enter ID">
+<button class="action-btn" onclick="track()">Track</button>
+
+<div id="trackRes" class="result"></div>
+</div>
+</div>
+
+<!-- ADMIN -->
+<div id="admin" class="section">
+<div class="card">
+<h2>Admin Panel</h2>
+
+<input id="adminId" placeholder="Complaint ID">
+<select id="status">
+<option>Pending</option>
+<option>In Progress</option>
+<option>Resolved</option>
+</select>
+
+<button class="action-btn" onclick="update()">Update</button>
+
+<div id="adminRes" class="result"></div>
+</div>
+</div>
+
+</div>
+
+<script>
+
+/* ---------- CORE STORAGE ---------- */
+const Storage = {
+    get: () => JSON.parse(localStorage.getItem("complaints")) || [],
+    save: (data) => localStorage.setItem("complaints", JSON.stringify(data))
+};
+
+/* ---------- NAVIGATION ---------- */
+function show(id) {
+    document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+}
+
+/* ---------- ID GENERATOR ---------- */
+function generateID() {
+    return "CMP-" + Math.floor(Math.random() * 1000000);
+}
+
+/* ---------- SUBMIT ---------- */
+function submit() {
+    const name = document.getElementById("name").value.trim();
+    const category = document.getElementById("category").value;
+    const desc = document.getElementById("desc").value.trim();
+
+    if (!name || !desc) return alert("Fill all fields!");
+
+    const complaint = {
+        id: generateID(),
+        name,
+        category,
+        desc,
+        status: "Pending",
+        time: new Date().toLocaleString()
+    };
+
+    const data = Storage.get();
+    data.push(complaint);
+    Storage.save(data);
+
+    document.getElementById("submitRes").innerHTML =
+        `✅ ID: <b>${complaint.id}</b>`;
+
+    document.getElementById("name").value = "";
+    document.getElementById("desc").value = "";
+}
+
+/* ---------- TRACK ---------- */
+function track() {
+    const id = document.getElementById("trackId").value.trim();
+    const data = Storage.get();
+
+    const c = data.find(x => x.id === id);
+
+    if (!c) {
+        document.getElementById("trackRes").innerHTML = "❌ Not Found";
+        return;
+    }
+
+    let statusClass = "pending";
+    if (c.status === "In Progress") statusClass = "progress";
+    if (c.status === "Resolved") statusClass = "resolved";
+
+    document.getElementById("trackRes").innerHTML = `
+        <b>Name:</b> ${c.name}<br>
+        <b>Category:</b> ${c.category}<br>
+        <b>Description:</b> ${c.desc}<br>
+        <b>Status:</b> <span class="status ${statusClass}">${c.status}</span><br>
+        <b>Time:</b> ${c.time}
+    `;
+}
+
+/* ---------- UPDATE ---------- */
+function update() {
+    const id = document.getElementById("adminId").value.trim();
+    const status = document.getElementById("status").value;
+
+    const data = Storage.get();
+    const index = data.findIndex(x => x.id === id);
+
+    if (index === -1) {
+        document.getElementById("adminRes").innerHTML = "❌ Not Found";
+        return;
+    }
+
+    data[index].status = status;
+    Storage.save(data);
+
+    document.getElementById("adminRes").innerHTML = "✅ Updated!";
+}
+
+</script>
+
+</body>
+</html>
